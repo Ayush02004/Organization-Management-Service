@@ -8,9 +8,9 @@ FastAPI-based multi-tenant org management service using MongoDB. Provides org li
 1) **Clone**: `git clone <repo> && cd Organization-Management-Service`
 2) **Env vars**: create a `.env` (or set environment variables). Example placeholders — replace with your own values:
   ```env
-  MONGO_URI=mongodb://mongo:27017          # your Mongo URI (if running locally change host/port as needed)
-  MASTER_DB=org_master_db                      # master database name
-  JWT_SECRET=change_me                         # set a strong secret
+  MONGO_URI=mongodb://mongo:27017   # your Mongo URI (if running locally change host/port as needed)
+  MASTER_DB=org_master_db           # master database name
+  JWT_SECRET=change_me              # set a strong secret
   JWT_ALGORITHM=HS256
   ACCESS_TOKEN_EXPIRE_MINUTES=60
   ```
