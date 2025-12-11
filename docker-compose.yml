@@ -1,0 +1,25 @@
+services:
+  api:
+    build: .
+    container_name: org-mgmt-api
+    ports:
+      - "8000:8000"
+    environment:
+      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017}
+      MASTER_DB: ${MASTER_DB:-org_master_db}
+      JWT_SECRET: ${JWT_SECRET:-change_me}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:7
+    container_name: org-mgmt-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
