@@ -14,7 +14,7 @@ from app.models.utils import serialize_mongo_doc
 class OrganizationService:
     """
     Handles organization lifecycle operations (create, fetch, update, delete).
-    Only the create flow is implemented for the current assignment.
+    For now create and read flows are implemented for the assignment.
     """
 
     def __init__(self) -> None:
@@ -28,6 +28,34 @@ class OrganizationService:
         slug = name.strip().lower()
         slug = re.sub(r"[^a-z0-9]+", "_", slug).strip("_")
         return slug
+
+    async def get_organization_by_name(self, organization_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Fetch an organization document by its name (case-insensitive, normalized).
+        Returns a serialized document or None if not found.
+        """
+        normalized = self._normalize_name(organization_name)
+        if not normalized:
+            return None
+
+        org = await self.organizations.find_one({"name": normalized})
+        if not org:
+            return None
+
+        owner_email: Optional[str] = None
+        owner_admin_id = org.get("owner_admin_id")
+        if owner_admin_id:
+            admin = await self.admins.find_one({"_id": owner_admin_id})
+            if admin:
+                owner_email = admin.get("email")
+
+        # hide internal identifiers and expose owner email instead
+        org = dict(org)
+        org.pop("_id", None)
+        org.pop("owner_admin_id", None)
+        org["owner_email"] = owner_email
+
+        return serialize_mongo_doc(org)
 
     async def create_organization(self, organization_name: str, email: str, password: str) -> Dict[str, Any]:
         """
