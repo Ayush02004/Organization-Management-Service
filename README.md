@@ -2,6 +2,51 @@
 
 FastAPI-based multi-tenant org management service using MongoDB. Provides org lifecycle APIs, admin authentication (JWT), and dynamic per-organization collections.
 
+flowchart TD
+    Client[Client (Postman/Frontend)] -->|HTTP| FastAPI[FastAPI App<br/>app.main]
+
+    subgraph Routers
+        AuthRoute[/Routes: auth.py<br/>POST /admin/login/]
+        OrgRoute[/Routes: org.py<br/>POST /org/create<br/>GET /org/get<br/>PUT /org/update(_better)<br/>DELETE /org/delete/]
+    end
+
+    FastAPI --> AuthRoute
+    FastAPI --> OrgRoute
+
+    subgraph Services
+        AuthSvc[AuthService<br/>services/auth_service.py]
+        OrgSvc[OrganizationService<br/>services/org_service.py]
+    end
+
+    AuthRoute --> AuthSvc
+    OrgRoute --> OrgSvc
+
+    subgraph Security
+        JWT[JWT encode/decode<br/>core/security.py]
+        Hash[Hash/Verify (bcrypt/passlib)]
+    end
+
+    AuthSvc -->|verify_password| Hash
+    AuthSvc -->|create_access_token| JWT
+    OrgSvc -->|token auth (delete)| JWT
+
+    subgraph Data
+        MasterDB[(Mongo Master DB<br/>collections:<br/>organizations<br/>admin_users)]
+        OrgCollections[(Per-org collections<br/>org_<slug>)]
+    end
+
+    AuthSvc -->|find admin| MasterDB
+    OrgSvc -->|org metadata<br/>admin create/update| MasterDB
+    OrgSvc -->|create/migrate/drop| OrgCollections
+
+    NoteCreate[Create org: normalize name, create collection, insert org+admin, link owner]
+    NoteUpdate[Update org: authenticate admin, ensure unique name, copy data to new collection, drop old, update metadata]
+    NoteDelete[Delete org: JWT auth, drop org collection, delete admins + org doc]
+
+    OrgSvc -.-> NoteCreate
+    OrgSvc -.-> NoteUpdate
+    OrgSvc -.-> NoteDelete
+  
 ## Quick start
 
 ### Common setup
