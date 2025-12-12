@@ -2,50 +2,42 @@
 
 FastAPI-based multi-tenant org management service using MongoDB. Provides org lifecycle APIs, admin authentication (JWT), and dynamic per-organization collections.
 
-flowchart TD
-    Client[Client (Postman/Frontend)] -->|HTTP| FastAPI[FastAPI App<br/>app.main]
-
-    subgraph Routers
-        AuthRoute[/Routes: auth.py<br/>POST /admin/login/]
-        OrgRoute[/Routes: org.py<br/>POST /org/create<br/>GET /org/get<br/>PUT /org/update(_better)<br/>DELETE /org/delete/]
+flowchart LR
+    subgraph Client
+        U[User / Admin]
     end
 
-    FastAPI --> AuthRoute
-    FastAPI --> OrgRoute
-
-    subgraph Services
-        AuthSvc[AuthService<br/>services/auth_service.py]
-        OrgSvc[OrganizationService<br/>services/org_service.py]
+    subgraph Render ["API Service"]
+        direction TB
+        API["FastAPI App (app.main)"]
+        AUTH["Auth Routes /admin/login"]
+        ORG["Org Routes /org/create|get|update"]
+        SRV["Services AuthService / OrganizationService"]
     end
 
-    AuthRoute --> AuthSvc
-    OrgRoute --> OrgSvc
-
-    subgraph Security
-        JWT[JWT encode/decode<br/>core/security.py]
-        Hash[Hash/Verify (bcrypt/passlib)]
+    subgraph Sec ["Security Util"]
+        JWT["JWT Issuer create_access_token"]
+        HASH["Password Hashing (passlib bcrypt)"]
     end
 
-    AuthSvc -->|verify_password| Hash
-    AuthSvc -->|create_access_token| JWT
-    OrgSvc -->|token auth (delete)| JWT
-
-    subgraph Data
-        MasterDB[(Mongo Master DB<br/>collections:<br/>organizations<br/>admin_users)]
-        OrgCollections[(Per-org collections<br/>org_<slug>)]
+    subgraph Mongo ["MongoDB"]
+        MASTER[("Master DB (org_master_db)")]
+        ORG_COLL[("Per-Org Collections org_&lt;slug&gt;")]
     end
 
-    AuthSvc -->|find admin| MasterDB
-    OrgSvc -->|org metadata<br/>admin create/update| MasterDB
-    OrgSvc -->|create/migrate/drop| OrgCollections
+    %% Connections
+    U -->|HTTP| API
+    API --> AUTH
+    API --> ORG
+    AUTH --> SRV
+    ORG --> SRV
 
-    NoteCreate[Create org: normalize name, create collection, insert org+admin, link owner]
-    NoteUpdate[Update org: authenticate admin, ensure unique name, copy data to new collection, drop old, update metadata]
-    NoteDelete[Delete org: JWT auth, drop org collection, delete admins + org doc]
+    SRV -->|hash/verify| HASH
+    SRV -->|issue/verify| JWT
 
-    OrgSvc -.-> NoteCreate
-    OrgSvc -.-> NoteUpdate
-    OrgSvc -.-> NoteDelete
+    SRV -->|admin_users| MASTER
+    SRV -->|organizations| MASTER
+    SRV -->|tenant data| ORG_COLL
   
 ## Quick start
 
