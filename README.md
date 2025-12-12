@@ -73,6 +73,33 @@ Base URL examples assume `http://127.0.0.1:8000`.
   - `admin_users`: admins with `org_id`, `email`, `password_hash`, `role`, `is_active`.
 - **Per-org collections**: created as `org_<slug>` and hold tenant-specific data (currently empty schema; copied during rename operations).
 
+
+## Notes & assumptions
+- Email validation uses `EmailStr`; special-use domains (e.g., `.local`) are rejected unless models are relaxed.
+- JWT tokens are only issued at login; no refresh/rotation implemented.
+- Org names are normalized to lowercase slug with underscores for collection naming; uniqueness enforced on the normalized value.
+- Renames migrate data by copying documents to a new collection, then dropping the old one.
+
+### Note on `/org/update` vs `/org/update_better`
+The assignment’s `/org/update` description was ambiguous about how the “new” name was provided. I implemented `/org/update` to take a single `organization_name` plus admin email/password. To cover the clearer flow, `/org/update_better` accepts both `current_organization_name` and `new_organization_name`, authenticates the admin, checks ownership, enforces uniqueness, migrates data to the new collection, and then drops the old one. Use `/org/update_better` when you want to explicitly specify which org is being renamed.
+
+
+## Design notes
+- Simple single-DB, per-org collection approach keeps isolation while staying on one Mongo deployment.
+- JWT-only auth keeps the flow minimal; tokens embed `sub` (admin) and `org` for authorization checks.
+- Org names normalize to lowercase+underscores for safe collection naming and uniqueness.
+
+## Project layout
+```
+app/
+  main.py            # FastAPI app + router wiring
+  core/              # config, security (JWT, hashing)
+  db/                # Mongo client helpers
+  routes/            # FastAPI routers (auth, org)
+  services/          # business logic (auth, org)
+  models/            # pydantic models and utils
+create_admin.py      # helper script to seed a master admin
+```
 ## Testing with examples
 
 Use curl/Postman; ensure JSON bodies and `Content-Type: application/json`.
@@ -94,29 +121,5 @@ Use curl/Postman; ensure JSON bodies and `Content-Type: application/json`.
   curl -X DELETE "http://127.0.0.1:8000/org/delete?organization_name=Acme Inc" \
     -H "Authorization: Bearer <token>"
   ```
-
-## Notes & assumptions
-- Email validation uses `EmailStr`; special-use domains (e.g., `.local`) are rejected unless models are relaxed.
-- JWT tokens are only issued at login; no refresh/rotation implemented.
-- Org names are normalized to lowercase slug with underscores for collection naming; uniqueness enforced on the normalized value.
-- Renames migrate data by copying documents to a new collection, then dropping the old one.
-
-
-## Design notes
-- Simple single-DB, per-org collection approach keeps isolation while staying on one Mongo deployment.
-- JWT-only auth keeps the flow minimal; tokens embed `sub` (admin) and `org` for authorization checks.
-- Org names normalize to lowercase+underscores for safe collection naming and uniqueness.
-
-## Project layout
-```
-app/
-  main.py            # FastAPI app + router wiring
-  core/              # config, security (JWT, hashing)
-  db/                # Mongo client helpers
-  routes/            # FastAPI routers (auth, org)
-  services/          # business logic (auth, org)
-  models/            # pydantic models and utils
-create_admin.py      # helper script to seed a master admin
-```
-
+## Project Diagram
 ![High level diagram](diagram.png)
