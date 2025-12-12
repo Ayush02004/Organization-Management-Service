@@ -1,43 +1,6 @@
 # Organization Management Service
 
 FastAPI-based multi-tenant org management service using MongoDB. Provides org lifecycle APIs, admin authentication (JWT), and dynamic per-organization collections.
-
-flowchart LR
-    subgraph Client
-        U[User / Admin]
-    end
-
-    subgraph Render ["API Service"]
-        direction TB
-        API["FastAPI App (app.main)"]
-        AUTH["Auth Routes /admin/login"]
-        ORG["Org Routes /org/create|get|update"]
-        SRV["Services AuthService / OrganizationService"]
-    end
-
-    subgraph Sec ["Security Util"]
-        JWT["JWT Issuer create_access_token"]
-        HASH["Password Hashing (passlib bcrypt)"]
-    end
-
-    subgraph Mongo ["MongoDB"]
-        MASTER[("Master DB (org_master_db)")]
-        ORG_COLL[("Per-Org Collections org_&lt;slug&gt;")]
-    end
-
-    %% Connections
-    U -->|HTTP| API
-    API --> AUTH
-    API --> ORG
-    AUTH --> SRV
-    ORG --> SRV
-
-    SRV -->|hash/verify| HASH
-    SRV -->|issue/verify| JWT
-
-    SRV -->|admin_users| MASTER
-    SRV -->|organizations| MASTER
-    SRV -->|tenant data| ORG_COLL
   
 ## Quick start
 
@@ -155,3 +118,5 @@ app/
   models/            # pydantic models and utils
 create_admin.py      # helper script to seed a master admin
 ```
+
+![High level diagram](diagram.png)
